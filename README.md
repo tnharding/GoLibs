@@ -1,0 +1,1 @@
+This repository will contain package libraries written for the Go Programming language. 

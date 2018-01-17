@@ -127,6 +127,6 @@ type signerInfo struct {
 }
 
 type signerIdentifier struct {
-	IssuerAndSerialNumber IssuerAndSerialNumber
+	IssuerAndSerialNumber issuerAndSerialNumber
 	SubjectKeyIdentifier  subjectKeyIdentifier `asn1:"optional, tag:0"`
 }

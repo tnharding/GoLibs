@@ -5,78 +5,95 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math/big"
 	"os"
+	"time"
 )
 
 var ContentInfo contentInfo
 var SignedData signedData
 
-type signerInfo struct {
-	Version            int
-	Sid                signerIdentifier
-	DigestAlgorithm    digestAlgorithmIdentifier
-	SignedAttrs        signedAttributes `asn1:"optional, implicit, tag:0"`
-	SignatureAlgorithm digestAlgorithmIdentifier
-	//Signature          signatureValue
-	//UnsignedAttrs      []attributes `asn1:"implicit,optional,tag:1"`
+type Certificate struct {
+	TBSCertificate     TBSCertificate
+	SignatureAlgorithm algorithmIdentifier
+	SignatureValue     asn1.BitString
 }
 
-type signedAttributes struct {
-	SignedAttr []AttributeTypeAndValue
+type TBSCertificate struct {
+	Version            int `asn1:"optional,explicit,default:0,tag:0"`
+	SerialNumber       asn1.RawValue
+	SignatureAlgorithm algorithmIdentifier
+	Issuer             RDNSequence
+	Validity           Validity
+	Subject            RDNSequence
+	PublicKey          PublicKeyInfo
+}
+
+type RDNSequence []RelativeDistinguishedNameSET
+type RelativeDistinguishedNameSET []AttributeTypeAndValue
+
+type Validity struct {
+	NotBefore, NotAfter time.Time
+}
+
+type PublicKeyInfo struct {
+	Algorithm algorithmIdentifier
+	PublicKey asn1.BitString
+}
+
+type contentInfo struct {
+	ContentType asn1.ObjectIdentifier
+	Content     asn1.RawValue
+}
+
+type signedData struct {
+	Version          int
+	DigestAlgorithms []algorithmIdentifier `asn1:"set"`
+	EncapsulatedInfo encapsulatedContentInfo
+	Certificates     []Certificate `asn1:"optional,implicit,tag:0"`
+	SignerInfos      []signerInfo  `asn1:"set"`
+}
+
+type signerInfo struct {
+	Version      int
+	Sid          signerIdentifier
+	DigestAlg    algorithmIdentifier
+	SignedAttrs  []signedAttribute `asn1:"optional,default:0,tag:0"`
+	SignatureAlg algorithmIdentifier
+	Signature    []byte
 }
 
 type signerIdentifier struct {
-	Raw asn1.RawValue
-	//IssuerAndSerialNumber issuerAndSerialNumber
-	//SubjectKeyIdentifier  int `asn1:"optional, tag:0"`
+	Raw    asn1.RawContent
+	Rdn    RelativeDistinguishedName
+	Serial *big.Int
 }
 
-type issuerAndSerialNumber struct {
-	Raw         asn1.RawValue
-	RDNsequence []rdn `asn1:"set"`
-	//SerialNumber []byte
+type RelativeDistinguishedName struct {
+	Raw asn1.RawContent
 }
-
-var IssuerAndSerialNumber issuerAndSerialNumber
-
-type rdn struct {
-	Raw   asn1.RawValue
-	Type  asn1.ObjectIdentifier
-	Value interface{}
-}
-
-type RelativeDistinguishedNameSET []AttributeTypeAndValue
 
 type AttributeTypeAndValue struct {
 	Type  asn1.ObjectIdentifier
 	Value interface{}
 }
 
-type myCertificate struct {
-	Raw asn1.RawContent
+type signedAttribute struct {
+	Type  asn1.ObjectIdentifier
+	Value value `asn1:"set"`
 }
 
-type digestAlgorithmIdentifier struct {
-	Algorithm  asn1.ObjectIdentifier
-	Parameters asn1.RawValue `asn1:"optional"`
-}
-
-type contentInfo struct {
-	ContentType asn1.ObjectIdentifier
-	Content     asn1.RawValue //`asn1:"optional,explicit,default:0,tag:0"`
+type value struct {
+	Raw asn1.RawValue
 }
 
 type encapsulatedContentInfo struct {
-	EcontentType asn1.ObjectIdentifier
+	Raw asn1.RawContent
 }
 
-type signedData struct {
-	Version          int
-	DigestAlgorithms []digestAlgorithmIdentifier `asn1:"set"`
-	EncapContentInfo encapsulatedContentInfo
-	Certficates      []myCertificate `asn1:"implicit, optional,tag:0"`
-	//	Crls             []crl         `asn1:"optional,tag:1"`
-	SignerInfos []signerInfo `asn1:"set"`
+type algorithmIdentifier struct {
+	Algorithm  asn1.ObjectIdentifier
+	Parameters asn1.RawValue `asn1:"optional"`
 }
 
 func main() {
@@ -97,22 +114,25 @@ func main() {
 		log.Fatal(err)
 	}
 	fmt.Println(ContentInfo.ContentType)
-	//fmt.Println(ContentInfo.Content)
 
 	//unparse signed data
 	_, err = asn1.Unmarshal(ContentInfo.Content.Bytes, &SignedData)
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	fmt.Println(SignedData.Version)
-	fmt.Println(SignedData.DigestAlgorithms)
-	fmt.Println(SignedData.EncapContentInfo.EcontentType)
-	//for _, cert := range SignedData.Certficates {
-	//	fmt.Println(cert.Raw)
-	//}
+	fmt.Println("SignedData.Version:", SignedData.Version)
 
 	for _, signer := range SignedData.SignerInfos {
-		fmt.Println(signer.DigestAlgorithm)
+		fmt.Println("SignerInfo.Version:", signer.Version)
+		fmt.Println("SignerInfo.Sid:", signer.Sid.Raw)
+		fmt.Printf("SignerInfo.Sid.Serial: %x\n", signer.Sid.Serial)
+
+		fmt.Println("SignerInfo.SignedAttrs:")
+		for i, sattr := range signer.SignedAttrs {
+			fmt.Printf("Attribute %d: oid: %v valueTag: %v\n", i, sattr.Type, sattr.Value.Raw.Tag)
+		}
+		fmt.Println("SignerInfo.DigestAlg:", signer.DigestAlg)
+		fmt.Println("SignerInfo.SignatureAlg:", signer.SignatureAlg)
+		fmt.Println("SignerInfo.Signature:", signer.Signature)
 	}
 }

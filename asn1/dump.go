@@ -115,24 +115,24 @@ func main() {
 	}
 	fmt.Println(ContentInfo.ContentType)
 
-	//unparse signed data
-	_, err = asn1.Unmarshal(ContentInfo.Content.Bytes, &SignedData)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("SignedData.Version:", SignedData.Version)
+	// //unparse signed data
+	// _, err = asn1.Unmarshal(ContentInfo.Content.Bytes, &SignedData)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// fmt.Println("SignedData.Version:", SignedData.Version)
 
-	for _, signer := range SignedData.SignerInfos {
-		fmt.Println("SignerInfo.Version:", signer.Version)
-		fmt.Println("SignerInfo.Sid:", signer.Sid.Raw)
-		fmt.Printf("SignerInfo.Sid.Serial: %x\n", signer.Sid.Serial)
+	// for _, signer := range SignedData.SignerInfos {
+	// 	fmt.Println("SignerInfo.Version:", signer.Version)
+	// 	fmt.Println("SignerInfo.Sid:", signer.Sid.Raw)
+	// 	fmt.Printf("SignerInfo.Sid.Serial: %x\n", signer.Sid.Serial)
 
-		fmt.Println("SignerInfo.SignedAttrs:")
-		for i, sattr := range signer.SignedAttrs {
-			fmt.Printf("Attribute %d: oid: %v valueTag: %v\n", i, sattr.Type, sattr.Value.Raw.Tag)
-		}
-		fmt.Println("SignerInfo.DigestAlg:", signer.DigestAlg)
-		fmt.Println("SignerInfo.SignatureAlg:", signer.SignatureAlg)
-		fmt.Println("SignerInfo.Signature:", signer.Signature)
-	}
+	// 	fmt.Println("SignerInfo.SignedAttrs:")
+	// 	for i, sattr := range signer.SignedAttrs {
+	// 		fmt.Printf("Attribute %d: oid: %v valueTag: %v\n", i, sattr.Type, sattr.Value.Raw.Tag)
+	// 	}
+	// 	fmt.Println("SignerInfo.DigestAlg:", signer.DigestAlg)
+	// 	fmt.Println("SignerInfo.SignatureAlg:", signer.SignatureAlg)
+	// 	fmt.Println("SignerInfo.Signature:", signer.Signature)
+	// }
 }

@@ -1,19 +1,29 @@
 package cms
 
 import (
-	"strings"
+	"fmt"
+	"io/ioutil"
+	"log"
+	"os"
 	"testing"
 )
 
-func TestUnmarshal(t *testing.T) {
-	data := []byte("0\x05\f\x03a\xc9c")
-	var result invalidUTF8Test
-	_, err := Unmarshal(data, &result)
+func TestParseCMSContentType(t *testing.T) {
 
-	const expectedSubstring = "UTF"
-	if err == nil {
-		t.Fatal("Successfully unmarshaled invalid UTF-8 data")
-	} else if !strings.Contains(err.Error(), expectedSubstring) {
-		t.Fatalf("Expected error to mention %q but error was %q", expectedSubstring, err.Error())
+	file, err := os.Open("signedData.asn1")
+	if err != nil {
+		log.Fatal(err)
 	}
+	defer file.Close()
+
+	data, err := ioutil.ReadAll(file)
+	if err != nil {
+		log.Fatal("Error opening file")
+	}
+
+	oid, err := ParseCMSContentType(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println(oid)
 }

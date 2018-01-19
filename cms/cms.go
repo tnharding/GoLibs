@@ -4,8 +4,9 @@
 package cms
 
 import (
-	"crypto/x509/pkix"
 	"encoding/asn1"
+	"math/big"
+	"time"
 )
 
 // The following object identifiers identify the content information
@@ -83,32 +84,24 @@ var (
 )
 
 type contentInfo struct {
-	Raw         asn1.RawContent
 	ContentType asn1.ObjectIdentifier
 	Content     asn1.RawValue `asn1:"optional,explicit,default:0,tag:0"`
 }
 
 type signedData struct {
-	Raw              asn1.RawContent
-	Version          int `asn1:"explicit"`
-	DigestAlgorithms []digestAlgorithmIdentifier
-	EncapContentInfo []encapsulatedContentInfo
-	Certficates      []certificate `asn1:"optional,tag:0"`
+	Version          int
+	DigestAlgorithms []algorithmIdentifier `asn1:"set"`
+	EncapContentInfo encapsulatedContentInfo
+	Certficates      []Certificate `asn1:"optional,implicit,tag:0"`
 	Crls             []crl         `asn1:"optional,tag:1"`
-	SignerInfos      []signerInfo
+	SignerInfos      []signerInfo  `asn1:"set"`
 }
 
-type digestAlgorithmIdentifier struct {
+type algorithmIdentifier struct {
 	Algorithm  asn1.ObjectIdentifier
-	Parameters asn1.RawContent
+	Parameters asn1.RawValue `asn1:"optional"`
 }
-
 type encapsulatedContentInfo struct {
-	EcontentType asn1.ObjectIdentifier
-	Econtent     []byte `asn1:"optional,explicit,tag:0"` //[0] EXPLICIT OCTET STRING OPTIONAL
-}
-
-type certificate struct {
 	Raw asn1.RawContent
 }
 
@@ -117,16 +110,78 @@ type crl struct {
 }
 
 type signerInfo struct {
-	Version            int `asn1:"explicit"`
-	Sid                signerIdentifier
-	DigestAlgorithm    digestAlgorithmIdentifier
-	SignedAttrs        SignedAttributes `asn1:"optional, implicit, tag:0"`
-	SignatureAlgorithm pkix.AlgorithmIdentifier
-	Signature          signatureValue
-	UnsignedAttrs      []attributes `asn1:"implicit,optional,tag:1"`
+	Version      int
+	Sid          signerIdentifier
+	DigestAlg    algorithmIdentifier
+	SignedAttrs  []signedAttribute `asn1:"optional,default:0,tag:0"`
+	SignatureAlg algorithmIdentifier
+	Signature    []byte
 }
 
 type signerIdentifier struct {
-	IssuerAndSerialNumber issuerAndSerialNumber
-	SubjectKeyIdentifier  subjectKeyIdentifier `asn1:"optional, tag:0"`
+	Raw    asn1.RawContent
+	Rdn    RelativeDistinguishedName
+	Serial *big.Int
+}
+
+type RelativeDistinguishedName struct {
+	Raw asn1.RawContent
+}
+
+type signedAttribute struct {
+	Type  asn1.ObjectIdentifier
+	Value value `asn1:"set"`
+}
+
+type value struct {
+	Raw asn1.RawValue
+}
+
+type Certificate struct {
+	TBSCertificate     TBSCertificate
+	SignatureAlgorithm algorithmIdentifier
+	SignatureValue     asn1.BitString
+}
+
+type TBSCertificate struct {
+	Version            int `asn1:"optional,explicit,default:0,tag:0"`
+	SerialNumber       asn1.RawValue
+	SignatureAlgorithm algorithmIdentifier
+	Issuer             RDNSequence
+	Validity           Validity
+	Subject            RDNSequence
+	PublicKey          PublicKeyInfo
+}
+
+type RDNSequence []RelativeDistinguishedNameSET
+type RelativeDistinguishedNameSET []AttributeTypeAndValue
+
+type AttributeTypeAndValue struct {
+	Type  asn1.ObjectIdentifier
+	Value interface{}
+}
+
+type Validity struct {
+	NotBefore, NotAfter time.Time
+}
+
+type PublicKeyInfo struct {
+	Algorithm algorithmIdentifier
+	PublicKey asn1.BitString
+}
+
+// Unmarshal parses the DER-encoded ASN.1 data structure b
+// and uses the reflect package to fill in an arbitrary value pointed at by val.
+// Because Unmarshal uses the reflect package, the structs
+// being written to must use upper case field names.
+//
+// ParseCMSContentInfo returns a parse error.
+func ParseCMSContentType(b []byte) (asn1.ObjectIdentifier, error) {
+	var ContentInfo contentInfo
+
+	_, err := asn1.Unmarshal(b, &ContentInfo)
+	if err != nil {
+		return nil, err
+	}
+	return ContentInfo.ContentType, nil
 }

@@ -4,6 +4,7 @@
 package cms
 
 import (
+	"crypto/x509/pkix"
 	"encoding/asn1"
 	"math/big"
 	"time"
@@ -85,41 +86,41 @@ var (
 
 type contentInfo struct {
 	ContentType asn1.ObjectIdentifier
-	Content     asn1.RawValue `asn1:"optional,explicit,default:0,tag:0"`
+	//Content     asn1.RawValue `asn1:"optional,explicit,default:0,tag:0"`
 }
 
 type signedData struct {
 	Version          int
-	DigestAlgorithms []algorithmIdentifier `asn1:"set"`
+	DigestAlgorithms []pkix.AlgorithmIdentifier `asn1:"set"`
 	EncapContentInfo encapsulatedContentInfo
 	Certficates      []Certificate `asn1:"optional,implicit,tag:0"`
-	Crls             []crl         `asn1:"optional,tag:1"`
+	Crls             []crl         `asn1:"optional,implicit,tag:1"`
 	SignerInfos      []signerInfo  `asn1:"set"`
 }
 
-type algorithmIdentifier struct {
-	Algorithm  asn1.ObjectIdentifier
-	Parameters asn1.RawValue `asn1:"optional"`
-}
+// type algorithmIdentifier struct {
+// 	Algorithm  asn1.ObjectIdentifier
+// 	Parameters asn1.RawValue `asn1:"optional"`
+// }
+
 type encapsulatedContentInfo struct {
 	Raw asn1.RawContent
 }
 
 type crl struct {
-	Raw asn1.RawContent
+	List pkix.TBSCertificateList
 }
 
 type signerInfo struct {
 	Version      int
 	Sid          signerIdentifier
-	DigestAlg    algorithmIdentifier
+	DigestAlg    pkix.AlgorithmIdentifier
 	SignedAttrs  []signedAttribute `asn1:"optional,default:0,tag:0"`
-	SignatureAlg algorithmIdentifier
+	SignatureAlg pkix.AlgorithmIdentifier
 	Signature    []byte
 }
 
 type signerIdentifier struct {
-	Raw    asn1.RawContent
 	Rdn    RelativeDistinguishedName
 	Serial *big.Int
 }
@@ -139,14 +140,14 @@ type value struct {
 
 type Certificate struct {
 	TBSCertificate     TBSCertificate
-	SignatureAlgorithm algorithmIdentifier
+	SignatureAlgorithm pkix.AlgorithmIdentifier
 	SignatureValue     asn1.BitString
 }
 
 type TBSCertificate struct {
 	Version            int `asn1:"optional,explicit,default:0,tag:0"`
 	SerialNumber       asn1.RawValue
-	SignatureAlgorithm algorithmIdentifier
+	SignatureAlgorithm pkix.AlgorithmIdentifier
 	Issuer             RDNSequence
 	Validity           Validity
 	Subject            RDNSequence
@@ -166,7 +167,7 @@ type Validity struct {
 }
 
 type PublicKeyInfo struct {
-	Algorithm algorithmIdentifier
+	Algorithm pkix.AlgorithmIdentifier
 	PublicKey asn1.BitString
 }
 
